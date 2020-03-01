@@ -1,0 +1,109 @@
+from flask import Flask
+from flask import request
+from flask import jsonify
+import email
+import smtplib
+import ssl
+import json
+import base64
+import os
+import sys
+from email.mime.base import MIMEBase
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.image import MIMEImage
+from email import encoders
+app = Flask(__name__)
+emailTemplateDir = 'email-template'
+
+
+@app.route('/test')
+def hello_world():
+    return 'Hello, World!'
+
+@app.route('/sendemail', methods = ['POST'])
+def api_message():
+  
+  try:
+    receiver_emails = request.json.get('addresses')
+
+    with open('app-config.json') as f:
+        configData = json.load(f)
+
+    # Create a multipart message and set headers
+    message = MIMEMultipart()
+    message["From"] = configData.get('senderName')
+    # message["To"] = request.json.addresses
+    message["Subject"] = request.json.get('subject')
+
+    with open(emailTemplateDir + '\\message_template.html', 'r') as file:
+        data = file.read().replace('\n', '')
+        data = data.replace('{{ paragraph }}', request.json.get('body'))
+
+    # Add body to email
+    message.attach(MIMEText(data, "html"))
+
+    # Read header image binary from the current directory
+    fp = open(emailTemplateDir + '\\email_header.jpg', 'rb')
+    headerImage = MIMEImage(fp.read())
+    fp.close()
+
+    # Define the image's ID as referenced above
+    headerImage.add_header('Content-ID', '<email_header>')
+    message.attach(headerImage)
+
+    # Read footer image binary from the current directory
+    fp = open(emailTemplateDir + '\\email_footer.png', 'rb')
+    footerImage = MIMEImage(fp.read())
+    fp.close()
+
+    # Define the image's ID as referenced above
+    footerImage.add_header('Content-ID', '<email_footer>')
+    message.attach(footerImage)
+
+    # filename = "Marathon.pdf"  # In same directory as script
+
+    with open(request.json.get('file_name'), "wb") as new_file:
+        new_file.write(base64.b64decode(request.json.get('blob')))
+
+    # Open PDF file in binary mode
+    with open(request.json.get('file_name'), "rb") as attachment:
+        # Add file as application/octet-stream
+        # Email client can usually download this automatically as attachment
+        part = MIMEBase("application", "octet-stream")
+        part.set_payload(attachment.read())
+
+    # Encode file in ASCII characters to send by email
+    encoders.encode_base64(part)
+
+    # Add header as key/value pair to attachment part
+    part.add_header(
+        "Content-Disposition",
+        f"attachment; filename= {request.json.get('file_name')}",
+    )
+
+    # Add attachment to message and convert message to string
+    message.attach(part)
+    text = message.as_string()
+
+    # Log in to server using secure context and send email
+    context = ssl.create_default_context()
+    with smtplib.SMTP_SSL(configData.get('server'), configData.get('port'), context=context) as server:
+        # server.login(configData.get('senderEmail'), configData.get('password'))
+        server.sendmail(configData.get('senderName'), receiver_emails, text)
+        server.quit()
+
+    if os.path.exists(request.json.get('file_name')):
+        os.remove(request.json.get('file_name'))
+    
+    return jsonify(
+        success = True
+    )
+  except:
+      # e = sys.exc_info()[0]
+      if os.path.exists(request.json.get('file_name')):
+        os.remove(request.json.get('file_name'))
+      return jsonify(
+          success = False,
+          error = 'Error in sending email'
+      )

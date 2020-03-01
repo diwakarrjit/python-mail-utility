@@ -1,0 +1,17 @@
+This is an automatically generated email. Please do not respond to this email.
+
+
+{% for paragraph in message.split('\n') %}
+{{ paragraph }}
+{% endfor %}
+
+In case of any questions please contact the GSA Tax Innovation mailbox <tax.innovation@de.ey.com>
+
+
+Hope you will find that helpful and best regards,
+
+Your GSA Tax Innovation Team
+
+
+____________________________________________________________________________________________________
+This result is powered by GSA IDEAS Center
