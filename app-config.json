@@ -1,7 +1,7 @@
 {
-  "senderName":"tax.innovation@de.ey.com",
-  "senderEmail": "prabhakarthakur185@gmail.com",
-  "password": "diwakarrjit",
+  "senderName":"test sender",
+  "senderEmail": "test-diwakar@gmail.com",
+  "password": "kjhsdkjhskj",
   "server":"smtp.gmail.com",
   "port":465
 }
